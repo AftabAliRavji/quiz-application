@@ -1,0 +1,347 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Quiz</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f5f8;
+      color: #263238;
+      margin: 0;
+      padding: 24px 15px;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    header, .quiz-card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+
+    h1 { margin-top: 0; color: #183b56; }
+    .intro { color: #607080; line-height: 1.5; }
+
+    label { display: block; }
+
+    .name-input, .text-answer {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd3dc;
+      border-radius: 7px;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+
+    .question {
+      padding: 20px 0;
+      border-bottom: 1px solid #e6eaf0;
+    }
+
+    .question:last-child { border-bottom: 0; }
+    .question-title { font-weight: bold; margin-bottom: 14px; }
+
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 0;
+      cursor: pointer;
+    }
+
+    .option input { width: 17px; height: 17px; }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      border: 0;
+      border-radius: 7px;
+      background: #1769aa;
+      color: white;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled { background: #8796a5; cursor: not-allowed; }
+
+    #message {
+      display: none;
+      padding: 15px;
+      margin-top: 18px;
+      border-radius: 7px;
+      line-height: 1.5;
+    }
+
+    #message.success { display: block; background: #e5f5e9; color: #205b32; }
+    #message.error { display: block; background: #fdeaea; color: #8b2525; }
+
+    .small { font-size: 13px; color: #6c7885; }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <header>
+      <h1 id="quizTitle">My Quiz</h1>
+      <p class="intro">
+        Welcome! Enter your name and answer all 10 questions.
+        Your score will not be shown until the quiz organiser reveals the results.
+      </p>
+      <p class="small">Please submit your answers only once.</p>
+    </header>
+
+    <form id="quizForm">
+      <section class="quiz-card">
+        <label for="participantName"><strong>Your name</strong></label>
+        <input
+          class="name-input"
+          id="participantName"
+          name="participantName"
+          type="text"
+          maxlength="100"
+          placeholder="Enter your name"
+          autocomplete="name"
+          required
+        >
+      </section>
+
+      <section class="quiz-card">
+        <div id="questions"></div>
+      </section>
+
+      <section class="quiz-card">
+        <button id="submitButton" type="submit">Submit my answers</button>
+        <div id="message" role="status" aria-live="polite"></div>
+      </section>
+    </form>
+  </main>
+
+  <script>
+    // Replace this with your deployed Google Apps Script URL in a later step.
+    const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+    const questions = [
+      {
+        id: "Q1",
+        type: "multiple",
+        text: "What is the capital city of France?",
+        options: [
+          ["A", "London"],
+          ["B", "Paris"],
+          ["C", "Rome"],
+          ["D", "Madrid"]
+        ]
+      },
+      {
+        id: "Q2",
+        type: "multiple",
+        text: "How many sides does a hexagon have?",
+        options: [
+          ["A", "Five"],
+          ["B", "Seven"],
+          ["C", "Six"],
+          ["D", "Eight"]
+        ]
+      },
+      {
+        id: "Q3",
+        type: "text",
+        text: "What is the largest planet in our solar system?"
+      },
+      {
+        id: "Q4",
+        type: "multiple",
+        text: "What is the largest mammal in the world?",
+        options: [
+          ["A", "African Elephant"],
+          ["B", "Blue Whale"],
+          ["C", "Giraffe"],
+          ["D", "Hippopotamus"]
+        ]
+      },
+      {
+        id: "Q5",
+        type: "text",
+        text: "What is the chemical symbol for water?"
+      },
+      {
+        id: "Q6",
+        type: "multiple",
+        text: "Which country is Tokyo the capital of?",
+        options: [
+          ["A", "China"],
+          ["B", "Thailand"],
+          ["C", "South Korea"],
+          ["D", "Japan"]
+        ]
+      },
+      {
+        id: "Q7",
+        type: "text",
+        text: "How many minutes are there in one hour?"
+      },
+      {
+        id: "Q8",
+        type: "multiple",
+        text: "Which musical instrument has black and white keys?",
+        options: [
+          ["A", "Piano"],
+          ["B", "Violin"],
+          ["C", "Drum"],
+          ["D", "Flute"]
+        ]
+      },
+      {
+        id: "Q9",
+        type: "text",
+        text: "At what temperature does water freeze in degrees Celsius?"
+      },
+      {
+        id: "Q10",
+        type: "text",
+        text: "What is the name of the star at the centre of our solar system?"
+      }
+    ];
+
+    const questionsContainer = document.getElementById("questions");
+
+    function renderQuestions() {
+      questions.forEach((question, index) => {
+        const section = document.createElement("div");
+        section.className = "question";
+
+        const title = document.createElement("div");
+        title.className = "question-title";
+        title.textContent = (index + 1) + ". " + question.text;
+        section.appendChild(title);
+
+        if (question.type === "multiple") {
+          question.options.forEach(([value, label]) => {
+            const optionLabel = document.createElement("label");
+            optionLabel.className = "option";
+
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = question.id;
+            radio.value = value;
+            radio.required = true;
+
+            const optionText = document.createElement("span");
+            optionText.textContent = value + ". " + label;
+
+            optionLabel.appendChild(radio);
+            optionLabel.appendChild(optionText);
+            section.appendChild(optionLabel);
+          });
+        } else {
+          const input = document.createElement("input");
+          input.className = "text-answer";
+          input.type = "text";
+          input.name = question.id;
+          input.maxLength = 500;
+          input.placeholder = "Type your answer here";
+          input.required = true;
+          section.appendChild(input);
+        }
+
+        questionsContainer.appendChild(section);
+      });
+    }
+
+    function getParticipantToken() {
+      let token = localStorage.getItem("quizParticipantToken");
+
+      if (!token) {
+        token = crypto.randomUUID();
+        localStorage.setItem("quizParticipantToken", token);
+      }
+
+      return token;
+    }
+
+    function showMessage(message, type) {
+      const box = document.getElementById("message");
+      box.textContent = message;
+      box.className = type;
+    }
+
+    renderQuestions();
+
+    document.getElementById("quizForm").addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const button = document.getElementById("submitButton");
+      const form = event.currentTarget;
+
+      if (!form.reportValidity()) return;
+
+      if (API_URL === "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE") {
+        showMessage("The quiz website has not been connected to the submission service yet.", "error");
+        return;
+      }
+
+      const answers = questions.map(question => {
+        if (question.type === "multiple") {
+          return form.querySelector('input[name="' + question.id + '"]:checked').value;
+        }
+
+        return form.elements[question.id].value.trim();
+      });
+
+      const payload = {
+        name: document.getElementById("participantName").value.trim(),
+        participantToken: getParticipantToken(),
+        answers: answers
+      };
+
+      button.disabled = true;
+      button.textContent = "Submitting...";
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          redirect: "follow",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.message || "Your submission could not be completed.");
+        }
+
+        showMessage(
+          "Thank you, " + payload.name + "! Your answers have been submitted successfully. Your score will be revealed by the quiz organiser.",
+          "success"
+        );
+
+        form.querySelectorAll("input").forEach(input => input.disabled = true);
+        button.textContent = "Answers submitted";
+
+      } catch (error) {
+        showMessage(
+          "We could not confirm your submission. Please try again. Details: " + error.message,
+          "error"
+        );
+        button.disabled = false;
+        button.textContent = "Submit my answers";
+      }
+    });
+  </script>
+</body>
+</html>
